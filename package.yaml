@@ -25,6 +25,7 @@ dependencies:
 - comonad
 - lens
 - selections
+- bifunctors
 
 library:
   source-dirs: src
