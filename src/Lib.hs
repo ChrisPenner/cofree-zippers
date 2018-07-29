@@ -11,6 +11,7 @@ module Lib where
 import Control.Comonad.Cofree
 import Control.Lens hiding ((:<))
 import Data.Functor.Compose
+import Data.Maybe
 
 data Zip f a =
   Zip ([Cofree (Compose f Maybe) a])
@@ -27,9 +28,9 @@ extract (Zip _ (a :< _)) = a
 up ::
      forall f a. Functor f
   => Zip f a
-  -> Zip f a
-up z@(Zip [] _) = z
-up (Zip ((p :< pcfr):ps) cfr) = Zip ps newFocus
+  -> Maybe (Zip f a)
+up (Zip [] _) = Nothing
+up (Zip ((p :< pcfr):ps) cfr) = Just $ Zip ps newFocus
   where
     newFocus :: Cofree f a
     newFocus = p :< blah pcfr
@@ -39,6 +40,9 @@ up (Zip ((p :< pcfr):ps) cfr) = Zip ps newFocus
     blah2 Nothing = cfr
     blah2 (Just (a :< as)) = a :< blah as
 
+up' :: Functor f => Zip f a -> Zip f a
+up' z = fromMaybe z (up z)
+
 hoistMaybe :: Functor f => Cofree f a -> Cofree (Compose f Maybe) a
 hoistMaybe = hoistCofree (Compose . fmap pure)
 
@@ -46,16 +50,19 @@ down ::
      forall f a. Functor f
   => (forall b. Traversal' (f b) b)
   -> Zip f a
-  -> Zip f a
-down t z@(Zip oldParents cfr@(_ :< fa)) =
+  -> Maybe (Zip f a)
+down t (Zip oldParents cfr@(_ :< fa)) =
   case (fa ^? t) of
-    Nothing -> z
-    Just next -> Zip (newParent : oldParents) next
+    Nothing -> Nothing
+    Just next -> Just $ Zip (newParent : oldParents) next
   where
     newParent :: Cofree (Compose f Maybe) a
     newParent = setP $ hoistMaybe cfr
     setP :: Cofree (Compose f Maybe) a -> Cofree (Compose f Maybe) a
     setP (a :< Compose fa') = a :< Compose (set t Nothing fa')
+
+down' :: Functor f => (forall b. Traversal' (f b) b) -> Zip f a -> Zip f a
+down' t z = fromMaybe z (down t z)
 
 exampleM :: Zip Maybe Char
 exampleM = zipCofree ('a' :< Just ('b' :< Just ('c' :< Nothing)))
