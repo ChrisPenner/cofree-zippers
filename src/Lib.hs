@@ -8,22 +8,21 @@
 
 module Lib where
 
+import Control.Applicative
 import Control.Comonad.Cofree
 import Control.Lens hiding ((:<))
 import Data.Functor.Compose
 import Data.Maybe
-
-data Zip f a =
-  Zip ([Cofree (Compose f Maybe) a])
-      (Cofree f a)
-  deriving (Functor, Show)
-
--- deriving instance (Show1 f, Show a) => Show (Zip f a)
-zipCofree :: Cofree f a -> Zip f a
-zipCofree fa = Zip [] fa
+import Zip
 
 extract :: Zip f a -> a
 extract (Zip _ (a :< _)) = a
+
+children :: Zip f a -> Cofree f a
+children (Zip _ cfr) = cfr
+
+parents :: Zip f a -> [Cofree (Compose f Maybe) a]
+parents (Zip ps _) = ps
 
 up ::
      forall f a. Functor f
@@ -72,3 +71,17 @@ exampleL = zipCofree ('a' :< ['b' :< ['d' :< []], 'c' :< []])
 
 exampleCofree :: Cofree [] Char
 exampleCofree = ('a' :< ['b' :< ['d' :< []], 'c' :< []])
+
+leaf :: Alternative f => a -> Cofree f a
+leaf a = a :< empty
+
+exampleRose :: Cofree [] String
+exampleRose =
+  ("top" :<
+   ["l" :< [leaf "ll", leaf "lr"], leaf "m", "r" :< [leaf "rl", leaf "rr"]])
+
+simpleRose :: Cofree [] String
+simpleRose = ("top" :< ["l" :< [leaf "end"], leaf "r"])
+
+exampleRoseZip :: Zip [] String
+exampleRoseZip = zipCofree exampleRose

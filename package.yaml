@@ -26,6 +26,8 @@ dependencies:
 - lens
 - selections
 - bifunctors
+- mtl
+- containers
 
 library:
   source-dirs: src
